@@ -25,12 +25,25 @@
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
     }
 
-    .chat-header {
-        padding: 15px;
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 30px;
         background-color: #202123;
         color: white;
-        text-align: center;
+    }
+
+    .navbar a {
+        color: white;
+        text-decoration: none;
         font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 5px;
+    }
+
+    .navbar a:hover {
+        background-color: #10a37f;
     }
 
     .messages-box {
@@ -95,10 +108,6 @@
         color: white;
     }
 
-    .message-input:focus {
-        outline: none;
-    }
-
     .btn-send {
         background-color: #10a37f;
         color: white;
@@ -116,12 +125,41 @@
 
 {% block content %}
 <div class="chat-container">
-    <div class="chat-header">ChatGPT</div>
+    <div class="navbar">
+        <div>ChatGPT</div>
+        <div>
+            {% if user.is_authenticated %}
+            <span>Welcome, {{ user.username }}!</span>
+            <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+            <a href="{% url 'login' %}">Login</a>
+            <a href="{% url 'register' %}">Register</a>
+            {% endif %}
+        </div>
+    </div>
     <div class="messages-box">
         <ul class="messages-list">
             <li class="message received">
-                <div class="message-text">Hello! How can I assist you today?</div>
+                <div class="message-text">Hello {{ user.username|default:"Guest" }}! How can I assist you today?</div>
             </li>
+
+            {% for chat in chats %}
+            {% if chat.user == request.user %}
+            <li class="message sent">
+                <div class='message-text'>
+                    <div class='message-sender'>
+                        <b>You</b>
+                    </div>
+                    <div class='message-content'>
+                        {{chat.message}}
+                    </div>
+                </div>
+            </li>
+            <li class="message received">
+                <div class="message-text">{{chat.response}}</div>
+            </li>
+            {% endif %}
+            {% endfor %}
         </ul>
     </div>
     <form class="message-form">
@@ -131,6 +169,7 @@
     </form>
 </div>
 {% endblock %}
+
 
 {% block scripts %}
 <script>
