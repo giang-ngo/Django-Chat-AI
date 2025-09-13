@@ -1,0 +1,25 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+
+# Django migrations cache
+*/migrations/__pycache__/
+
+# Django DB
+db.sqlite3
+
+# Static / media files
+staticfiles/
+media/
+
+# Logs
+*.log
+
+# Environment
+.env
+
+docker-compose.yml
+Dockerfile
+
+models/
+

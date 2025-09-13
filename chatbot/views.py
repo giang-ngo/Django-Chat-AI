@@ -1,83 +1,80 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-import openai
-from openai import OpenAI
-import os
-from django.contrib import auth
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
-from .models import Chat
-from django.utils import timezone
-
-# Access https://platform.openai.com/api-keys to create an OpenAI API key.
-# Access https://platform.openai.com/settings/organization/billing/overview to purchase credits.
-# Please get your OpenAI API key to use ChatGPT's services.
-client = OpenAI(api_key='YOUR-API-KEY-HERE')  # input-your-key
-# client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+from .models import Chat, TrainingData
 
 
-def chat_gpt(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"Error: Unable to process your request. {str(e)}"
-
-
+@login_required
 def chatbot(request):
-    # chats = Chat.objects.filter(user=request.user)
-    if request.method == 'POST':
-        message = request.POST.get('message')
-        response = chat_gpt(message)
-        if request.user.is_authenticated:
-            chat = Chat(user=request.user, message=message,
-                        response=response, created_at=timezone.now())
-            chat.save()
-        return JsonResponse({'message': message, 'response': response})
-    chats = Chat.objects.filter(
-        user=request.user) if request.user.is_authenticated else []
-    return render(request, 'chatbot.html', {'chats': chats})
+    chats = Chat.objects.filter(user=request.user).order_by('id')
+    td = TrainingData.objects.filter(user=request.user).first()
+    return render(request, "chatbot.html", {
+        "chats": chats,
+        "train_prompt": td.prompt if td else ""
+    })
 
 
-def login(request):
+@login_required
+@csrf_exempt
+def train_bot(request):
+    if request.method == "POST":
+        prompt = request.POST.get('prompt', '').strip()
+        obj, _ = TrainingData.objects.get_or_create(user=request.user)
+        obj.prompt = prompt
+        obj.save()
+        return JsonResponse({'status': 'ok', 'message': 'Prompt lưu thành công'})
+
+    td = TrainingData.objects.filter(user=request.user).first()
+    return JsonResponse({'prompt': td.prompt if td else ''})
+
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('chatbot')
+
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = auth.authenticate(request, username=username, password=password)
-        if user is not None:
-            auth.login(request, user)
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        user = authenticate(request, username=username, password=password)
+        if user:
+            auth_login(request, user)
             return redirect('chatbot')
-        else:
-            error_message = 'Invalid username or password'
-            return render(request, 'login.html', {'error_message': error_message})
-    else:
-        return render(request, 'login.html')
+        return render(request, 'login.html', {'error_message': 'Invalid username or password'})
+
+    return render(request, 'login.html')
 
 
-def register(request):
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('chatbot')
+
     if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password1 = request.POST['password']
-        password2 = request.POST['confirm_password']
-        if password1 == password2:
-            try:
-                user = User.objects.create_user(
-                    username, email, password1)
-                user.save()
-                auth.login(request, user)
-                return redirect('chatbot')
-            except:
-                error_message = 'Error creating account'
-                return render(request, 'register.html', {'error_message': error_message})
-        else:
-            error_message = 'Password don\'t match'
-            return render(request, 'register.html', {'error_message': error_message})
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password1 = request.POST.get('password', '').strip()
+        password2 = request.POST.get('confirm_password', '').strip()
+
+        if password1 != password2:
+            return render(request, 'register.html', {'error_message': "Passwords don't match"})
+
+        if User.objects.filter(username=username).exists():
+            return render(request, 'register.html', {'error_message': "Username already exists"})
+
+        try:
+            user = User.objects.create_user(
+                username=username, email=email, password=password1)
+            auth_login(request, user)
+            return redirect('chatbot')
+        except Exception as e:
+            return render(request, 'register.html', {'error_message': f"Error creating account: {e}"})
+
     return render(request, 'register.html')
 
 
-def logout(request):
-    auth.logout(request)
-    return redirect('chatbot')
+@login_required
+def logout_view(request):
+    auth_logout(request)
+    return redirect('login_view')
