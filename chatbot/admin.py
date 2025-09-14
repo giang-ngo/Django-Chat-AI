@@ -28,7 +28,7 @@ class ChatAdmin(admin.ModelAdmin):
     short_message.short_description = "Message"
 
     def full_message(self, obj):
-        return format_html('<textarea style="width:100%;height:60px;" readonly>{}</textarea>', obj.message)
+        return format_html('<textarea style="width:200%;height:1000px;" readonly>{}</textarea>', obj.message)
     full_message.short_description = "Full Message"
 
 
@@ -37,7 +37,7 @@ class ChatAdmin(admin.ModelAdmin):
     short_response.short_description = "Response"
 
     def full_response(self, obj):
-        return format_html('<textarea style="width:100%;height:60px;" readonly>{}</textarea>', obj.response)
+        return format_html('<textarea style="width:200%;height:100px;" readonly>{}</textarea>', obj.response)
     full_response.short_description = "Full Response"
 
     def short_topics(self, obj):
@@ -45,7 +45,7 @@ class ChatAdmin(admin.ModelAdmin):
     short_topics.short_description = "Topics"
 
     def full_topics(self, obj):
-        return format_html('<textarea style="width:100%;height:40px;" readonly>{}</textarea>', ", ".join(obj.topics) if obj.topics else "")
+        return format_html('<textarea style="width:200%;height:50px;" readonly>{}</textarea>', ", ".join(obj.topics) if obj.topics else "")
     full_topics.short_description = "Full Topics"
 
 @admin.register(TrainingData)
@@ -73,5 +73,5 @@ class TrainingDataAdmin(admin.ModelAdmin):
     short_prompt.short_description = "Prompt"
 
     def full_prompt(self, obj):
-        return format_html('<textarea style="width:100%;height:100px;" readonly>{}</textarea>', obj.prompt)
+        return format_html('<textarea style="width:300%;height:200px;" readonly>{}</textarea>', obj.prompt)
     full_prompt.short_description = "Full Prompt"

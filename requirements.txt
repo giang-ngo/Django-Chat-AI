@@ -5,3 +5,5 @@ llama-cpp-python
 channels>=4.0
 daphne==4.2.1
 channels_redis==4.1.0
+pyvi
+psycopg[binary]

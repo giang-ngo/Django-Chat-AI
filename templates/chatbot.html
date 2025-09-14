@@ -16,8 +16,8 @@
 
     .chat-container {
         width: 100%;
-        max-width: 900px;
-        height: 85vh;
+        max-width: 1000px;
+        height: 90vh;
         display: flex;
         flex-direction: column;
         background-color: #40414f;
@@ -58,6 +58,10 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
+    }
+
+    .messages-list li.message {
+        margin-bottom: 12px;
     }
 
     .messages-list {
@@ -291,86 +295,86 @@
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <script>
-$(function() {
-    const socket = new WebSocket(
-        (window.location.protocol === "https:" ? "wss" : "ws") + "://" + window.location.host + "/ws/chat/"
-    );
+    $(function () {
+        const socket = new WebSocket(
+            (window.location.protocol === "https:" ? "wss" : "ws") + "://" + window.location.host + "/ws/chat/"
+        );
 
-    socket.onopen = () => console.log("WebSocket connected.");
-    socket.onclose = () => console.log("WebSocket disconnected.");
+        socket.onopen = () => console.log("WebSocket connected.");
+        socket.onclose = () => console.log("WebSocket disconnected.");
 
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
+        socket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
 
-        // Lấy AI message cuối cùng
-        let lastMsg = $('.messages-list li.message.received:last .message-text');
-        if (!lastMsg.length) return;
+            // Lấy AI message cuối cùng
+            let lastMsg = $('.messages-list li.message.received:last .message-text');
+            if (!lastMsg.length) return;
 
-        if (data.type === "partial") {
-            let buffer = lastMsg.data('buffer') || '';
-            buffer += data.response;
-            lastMsg.data('buffer', buffer);
-            lastMsg.html('<b>AI:</b> ' + buffer + '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>');
-        }
-
-        if (data.type === "done") {
-            const finalResp = data.response || lastMsg.data('buffer') || '';
-            lastMsg.html('<b>AI:</b> ' + finalResp);
-            lastMsg.data('buffer', finalResp);
-
-            if (data.autocomplete) {
-                $('#message-input').attr('placeholder', data.autocomplete);
+            if (data.type === "partial") {
+                let buffer = lastMsg.data('buffer') || '';
+                buffer += data.response;
+                lastMsg.data('buffer', buffer);
+                lastMsg.html('<b>AI:</b> ' + buffer + '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>');
             }
 
-            const sugBox = $('#ai-suggestions');
-            sugBox.empty();
-            if (data.suggestions && data.suggestions.length > 0) {
-                data.suggestions.forEach(s => {
-                    $('<button>')
-                        .addClass('btn-send suggestion-btn')
-                        .text(s)
-                        .click(() => $('#message-input').val(s).focus())
-                        .appendTo(sugBox);
-                });
+            if (data.type === "done") {
+                const finalResp = data.response || lastMsg.data('buffer') || '';
+                lastMsg.html('<b>AI:</b> ' + finalResp);
+                lastMsg.data('buffer', finalResp);
+
+                if (data.autocomplete) {
+                    $('#message-input').attr('placeholder', data.autocomplete);
+                }
+
+                const sugBox = $('#ai-suggestions');
+                sugBox.empty();
+                if (data.suggestions && data.suggestions.length > 0) {
+                    data.suggestions.forEach(s => {
+                        $('<button>')
+                            .addClass('btn-send suggestion-btn')
+                            .text(s)
+                            .click(() => $('#message-input').val(s).focus())
+                            .appendTo(sugBox);
+                    });
+                }
             }
-        }
 
-        const box = $('.messages-box');
-        box.scrollTop(box[0].scrollHeight);
-    };
+            const box = $('.messages-box');
+            box.scrollTop(box[0].scrollHeight);
+        };
 
-    $('.message-form').submit(function(e) {
-        e.preventDefault();
-        const msg = $('#message-input').val().trim();
-        if (!msg) return;
+        $('.message-form').submit(function (e) {
+            e.preventDefault();
+            const msg = $('#message-input').val().trim();
+            if (!msg) return;
 
-        $('.messages-list').append(`<li class="message sent"><div class="message-text"><b>You:</b> ${msg}</div></li>`);
+            $('.messages-list').append(`<li class="message sent"><div class="message-text"><b>You:</b> ${msg}</div></li>`);
 
-        $('.messages-list').append(`<li class="message received"><div class="message-text"><b>AI:</b> <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div></li>`);
+            $('.messages-list').append(`<li class="message received"><div class="message-text"><b>AI:</b> <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div></li>`);
 
-        $('#message-input').val('');
-        $('#ai-suggestions').empty();
+            $('#message-input').val('');
+            $('#ai-suggestions').empty();
 
 
-        let trainPrompt = $('#train-prompt').val() || '';
+            let trainPrompt = $('#train-prompt').val() || '';
 
-        socket.send(JSON.stringify({ message: msg, train_prompt: trainPrompt }));
+            socket.send(JSON.stringify({ message: msg, train_prompt: trainPrompt }));
+        });
+
+
+        $('#btn-show-train').click(function () {
+            $('.train-bot-container').slideToggle();
+        });
+
+
+        $('#btn-train').click(function () {
+            const prompt = $('#train-prompt').val().trim();
+            if (!prompt) return;
+
+            $.post("{% url 'train_bot' %}", { prompt: prompt, csrfmiddlewaretoken: '{{ csrf_token }}' })
+                .done(res => alert(res.message))
+                .fail(err => alert("Lưu prompt thất bại"));
+        });
     });
-
-
-    $('#btn-show-train').click(function() {
-        $('.train-bot-container').slideToggle();
-    });
-
-
-    $('#btn-train').click(function() {
-        const prompt = $('#train-prompt').val().trim();
-        if (!prompt) return;
-
-        $.post("{% url 'train_bot' %}", { prompt: prompt, csrfmiddlewaretoken: '{{ csrf_token }}' })
-            .done(res => alert(res.message))
-            .fail(err => alert("Lưu prompt thất bại"));
-    });
-});
 </script>
 {% endblock %}
